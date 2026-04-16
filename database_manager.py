@@ -91,6 +91,23 @@ class UserRepository:
         with self.db.get_connection() as conn:
             return [dict(row) for row in conn.execute(query, (user_id,)).fetchall()]
             
+    def get_all_applications(self):
+        query = '''
+            SELECT a.id, a.start_date, a.payment_method, a.status, t.name as transport_name, u.login as user_login, u.full_name as user_name
+            FROM Applications a
+            JOIN Transport t ON a.transport_id = t.id
+            JOIN Users u ON a.user_id = u.id
+            ORDER BY a.id DESC
+        '''
+        with self.db.get_connection() as conn:
+            return [dict(row) for row in conn.execute(query).fetchall()]
+            
+    def update_application_status(self, app_id: int, new_status: str):
+        query = "UPDATE Applications SET status = ? WHERE id = ?"
+        with self.db.get_connection() as conn:
+            conn.execute(query, (new_status, app_id))
+            conn.commit()
+            
     def create_review(self, user_id: int, text: str, rating: int):
         query = "INSERT INTO Reviews (user_id, text, rating) VALUES (?, ?, ?)"
         with self.db.get_connection() as conn:

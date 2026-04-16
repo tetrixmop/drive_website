@@ -36,3 +36,7 @@ class ApplicationCreate(BaseModel):
 class ReviewCreate(BaseModel):
     text: str = Field(..., min_length=5, description="Текст отзыва")
     rating: int = Field(..., ge=1, le=5, description="Рейтинг от 1 до 5")
+
+class AppStatusUpdate(BaseModel):
+    status: str
+

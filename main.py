@@ -8,7 +8,7 @@ import os
 import uuid
 from typing import Optional
 
-from models import UserRegister, UserLogin, ApplicationCreate, ReviewCreate
+from models import UserRegister, UserLogin, ApplicationCreate, ReviewCreate, AppStatusUpdate
 from database_manager import DatabaseManager, UserRepository
 
 app = FastAPI(title="Водить.РФ")
@@ -50,7 +50,6 @@ def startup():
 
     user_repo.ensure_admin_exists()
 
-# ================= HTML Routes ================= #
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, session_id: Optional[str] = Cookie(None)):
     user = get_current_user(session_id)
@@ -88,7 +87,9 @@ async def admin_panel(request: Request, session_id: Optional[str] = Cookie(None)
     user = get_current_user(session_id)
     if not user or user["login"] != "Admin26":
         return RedirectResponse(url="/", status_code=303)
-    return HTMLResponse(content=f"<h1>Добро пожаловать в Панель Администратора, {user['full_name']}!</h1>")
+        
+    all_apps = user_repo.get_all_applications()
+    return templates.TemplateResponse(request=request, name="admin.html", context={"user": user, "applications": all_apps})
 
 @app.get("/logout")
 async def logout(response: Response, session_id: Optional[str] = Cookie(None)):
@@ -98,7 +99,6 @@ async def logout(response: Response, session_id: Optional[str] = Cookie(None)):
     response.delete_cookie("session_id")
     return response
 
-# ================= API Routes ================= #
 @app.post("/api/register")
 async def register(user: UserRegister):
     existing_user = user_repo.get_user_by_login(user.login)
@@ -146,6 +146,22 @@ async def reviewAPI(review_data: ReviewCreate, session_id: Optional[str] = Cooki
         return {"status": "success"}
     except Exception:
         raise HTTPException(status_code=500, detail="Ошибка сохранения")
+
+@app.put("/api/application/{app_id}/status")
+async def update_status_api(app_id: int, payload: AppStatusUpdate, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user or user["login"] != "Admin26":
+        raise HTTPException(status_code=403, detail="Действие запрещено")
+        
+    valid_statuses = ("Новая", "Идет обучение", "Обучение завершено")
+    if payload.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Неверный статус")
+        
+    try:
+        user_repo.update_application_status(app_id, payload.status)
+        return {"status": "success"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Ошибка БД")
 
 if __name__ == "__main__":
     import uvicorn
