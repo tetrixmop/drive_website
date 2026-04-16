@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация | Водить.РФ{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,123,255,0.08)] p-8 w-full max-w-xl border border-primary/10">
+    <h2 class="text-center mb-8">Создание аккаунта</h2>
+    
+    <div id="error-box" class="hidden mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm text-center"></div>
+    <div id="success-box" class="hidden mb-4 p-3 bg-green-50 text-success rounded-lg text-sm font-medium text-center border border-success/20"></div>
+
+    <form id="register-form" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-1 font-medium text-metallic text-sm">Логин</label>
+                <input type="text" id="login" minlength="6" pattern="[a-zA-Z0-9]+" title="Только латиница и цифры, мин. 6 символов" required placeholder="Ivan2026" class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+                <p class="helper-text text-metallic/70 mt-1">От 6 символов (A-Z, 0-9)</p>
+            </div>
+            
+            <div>
+                <label class="block mb-1 font-medium text-metallic text-sm">Пароль</label>
+                <input type="password" id="password" minlength="8" required placeholder="********" class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+                <p class="helper-text text-metallic/70 mt-1">От 8 символов</p>
+            </div>
+            
+            <div class="md:col-span-2">
+                <label class="block mb-1 font-medium text-metallic text-sm">ФИО</label>
+                <input type="text" id="full_name" required placeholder="Иванов Иван Иванович" class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+            </div>
+            
+            <div>
+                <label class="block mb-1 font-medium text-metallic text-sm">Дата рождения</label>
+                <input type="date" id="birth_date" required class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+            </div>
+            
+            <div>
+                <label class="block mb-1 font-medium text-metallic text-sm">Телефон</label>
+                <input type="tel" id="phone" required placeholder="+7 (999) 000-00-00" class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+            </div>
+            
+            <div class="md:col-span-2">
+                <label class="block mb-1 font-medium text-metallic text-sm">E-mail</label>
+                <input type="email" id="email" required placeholder="ivan@example.com" class="w-full px-4 py-2 border border-metallic/30 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors bg-whitebg">
+            </div>
+        </div>
+
+        <button type="submit" class="w-full bg-primary hover:bg-accent text-white py-3 rounded-lg font-medium transition-colors shadow mt-6">
+            Зарегистрироваться
+        </button>
+    </form>
+    
+    <p class="text-center mt-6 text-sm text-metallic">
+        Уже есть аккаунт? <a href="/login" class="text-primary hover:text-accent font-medium transition-colors">Войти</a>
+    </p>
+</div>
+
+<script>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('error-box');
+    const successBox = document.getElementById('success-box');
+    errorBox.classList.add('hidden');
+    successBox.classList.add('hidden');
+    
+    // Сбор данных из полей
+    const payload = {
+        login: document.getElementById('login').value,
+        password: document.getElementById('password').value,
+        full_name: document.getElementById('full_name').value,
+        birth_date: document.getElementById('birth_date').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value
+    };
+    
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            successBox.textContent = 'Регистрация прошла успешно! Через пару секунд вы будете перенаправлены на страницу входа.';
+            successBox.classList.remove('hidden');
+            setTimeout(() => { window.location.href = '/login'; }, 2500);
+        } else {
+            // Если ошибка валидации Pydantic возвращает массив detail
+            if (Array.isArray(data.detail)) {
+                errorBox.textContent = 'Ошибка валидации: ' + data.detail.map(err => err.msg).join(', ');
+            } else {
+                errorBox.textContent = data.detail || 'Произошла ошибка при регистрации';
+            }
+            errorBox.classList.remove('hidden');
+        }
+    } catch (err) {
+        errorBox.textContent = 'Проблема с подключением к серверу';
+        errorBox.classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}

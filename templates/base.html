@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Водить.РФ{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#007BFF',      /* Глубокий морской синий */
+                        accent: '#4CCFE0',       /* Ясно-бирюзовый */
+                        success: '#28A745',      /* Лесной зеленый */
+                        metallic: '#6C757D',     /* Металлический серый */
+                        whitebg: '#FFFFFF'       /* Белый фон */
+                    },
+                    fontFamily: {
+                        rubik: ['Rubik', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @font-face {
+            font-family: 'Rubik';
+            src: url('/fonts/Rubik/Rubik-VariableFont_wght.ttf') format('truetype');
+            font-weight: 100 900;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #FFFFFF;
+            color: #6C757D;
+            /* Текст - Металлический серый */
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #007BFF;
+        }
+
+        /* Rubik Bold 36px */
+        h2 {
+            font-size: 24px;
+            font-weight: 500;
+            color: #007BFF;
+        }
+
+        /* Rubik Medium 24px */
+        h3 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #007BFF;
+        }
+
+        /* Rubik Medium 18px */
+        p,
+        span,
+        div,
+        input,
+        label {
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        /* Rubik Regular 16px */
+        .helper-text {
+            font-size: 12px;
+            font-weight: 300;
+        }
+
+        /* Rubik Light 12px */
+
+        input:focus {
+            outline: none;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col bg-whitebg">
+
+    <header class="border-b border-primary/20 bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="flex items-center gap-2 text-primary hover:text-accent transition-colors">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                </svg>
+                <h1 class="text-3xl font-bold tracking-tight m-0" style="font-size: 28px;">Водить.РФ</h1>
+            </a>
+
+            <nav class="hidden md:flex space-x-8 items-center">
+                <a href="/" class="hover:text-accent font-medium transition-colors text-metallic">Главная</a>
+                <a href="/login" class="text-primary hover:text-accent transition-colors font-medium">Войти</a>
+                <a href="/register"
+                    class="bg-primary hover:bg-accent text-white px-5 py-2 rounded-full transition-colors font-medium shadow-md hover:shadow-lg">Регистрация</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-6 py-12 flex flex-col items-center justify-center">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="bg-primary/5 border-t border-primary/10 py-8">
+        <div
+            class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4">
+            <div>
+                <p class="font-medium text-primary">&copy; 2026 Водить.РФ.</p>
+                <p class="helper-text text-metallic mt-1">Океан возможностей в каждом клике.</p>
+            </div>
+
+            <div class="flex gap-4 items-center">
+                <a href="#" class="opacity-80 hover:opacity-100 transition-opacity">
+                    <img src="/social/social.png" alt="Social" class="w-8 h-8 object-contain drop-shadow" />
+                </a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
