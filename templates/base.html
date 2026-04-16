@@ -97,9 +97,14 @@
 
             <nav class="hidden md:flex space-x-8 items-center">
                 <a href="/" class="hover:text-accent font-medium transition-colors text-metallic">Главная</a>
-                <a href="/login" class="text-primary hover:text-accent transition-colors font-medium">Войти</a>
-                <a href="/register"
-                    class="bg-primary hover:bg-accent text-white px-5 py-2 rounded-full transition-colors font-medium shadow-md hover:shadow-lg">Регистрация</a>
+                {% if user %}
+                    <a href="/application" class="hover:text-accent font-medium transition-colors text-primary">Подать заявку</a>
+                    <a href="/dashboard" class="text-primary hover:text-accent transition-colors font-medium">Кабинет ({{ user.login }})</a>
+                    <a href="/logout" class="bg-metallic/10 hover:bg-red-50 text-red-500 px-5 py-2 rounded-full transition-colors font-medium">Выйти</a>
+                {% else %}
+                    <a href="/login" class="text-primary hover:text-accent transition-colors font-medium">Войти</a>
+                    <a href="/register" class="bg-primary hover:bg-accent text-white px-5 py-2 rounded-full transition-colors font-medium shadow-md hover:shadow-lg">Регистрация</a>
+                {% endif %}
             </nav>
         </div>
     </header>

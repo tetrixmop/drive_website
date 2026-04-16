@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Response, Cookie
+from fastapi import FastAPI, HTTPException, Response, Cookie, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -8,9 +8,8 @@ import os
 import uuid
 from typing import Optional
 
-from models import UserRegister, UserLogin
+from models import UserRegister, UserLogin, ApplicationCreate, ReviewCreate
 from database_manager import DatabaseManager, UserRepository
-import os
 
 app = FastAPI(title="Водить.РФ")
 
@@ -25,8 +24,12 @@ templates = Jinja2Templates(directory="templates")
 db_manager = DatabaseManager("database/drive.db")
 user_repo = UserRepository(db_manager)
 
-# session_id -> user_id
 active_sessions: dict[str, int] = {}
+
+def get_current_user(session_id: str):
+    if session_id and session_id in active_sessions:
+        return user_repo.get_user_by_id(active_sessions[session_id])
+    return None
 
 @app.on_event("startup")
 def startup():
@@ -45,61 +48,104 @@ def startup():
             ''')
         conn.commit()
 
-    # Админ существует?
     user_repo.ensure_admin_exists()
 
+# ================= HTML Routes ================= #
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+async def read_root(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    return templates.TemplateResponse(request=request, name="index.html", context={"user": user})
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse(request=request, name="login.html")
+async def login_page(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if user: return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(request=request, name="login.html", context={"user": user})
 
 @app.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
-    return templates.TemplateResponse(request=request, name="register.html")
+async def register_page(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if user: return RedirectResponse("/dashboard", status_code=303)
+    return templates.TemplateResponse(request=request, name="register.html", context={"user": user})
 
+@app.get("/application", response_class=HTMLResponse)
+async def application_page(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse(request=request, name="application.html", context={"user": user})
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    applications = user_repo.get_user_applications(user["id"])
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user, "applications": applications})
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_panel(request: Request, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user or user["login"] != "Admin26":
+        return RedirectResponse(url="/", status_code=303)
+    return HTMLResponse(content=f"<h1>Добро пожаловать в Панель Администратора, {user['full_name']}!</h1>")
+
+@app.get("/logout")
+async def logout(response: Response, session_id: Optional[str] = Cookie(None)):
+    if session_id in active_sessions:
+        del active_sessions[session_id]
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("session_id")
+    return response
+
+# ================= API Routes ================= #
 @app.post("/api/register")
 async def register(user: UserRegister):
     existing_user = user_repo.get_user_by_login(user.login)
     if existing_user:
         raise HTTPException(status_code=400, detail="Пользователь с таким логином уже существует.")
-    
     try:
         user_repo.create_user(user.model_dump())
         return {"status": "success", "message": "Пользователь успешно зарегистрирован!"}
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Ошибка при регистрации сервера.")
 
 @app.post("/api/login")
-async def login(credentials: UserLogin, response: Response):
+async def loginAPI(credentials: UserLogin, response: Response):
     user = user_repo.get_user_by_login(credentials.login)
-    
     if not user or not user_repo.verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
     
-    # Создание сессии
     session_id = str(uuid.uuid4())
     active_sessions[session_id] = user["id"]
-    
     response.set_cookie(key="session_id", value=session_id, httponly=True)
-    return {"status": "success", "message": "Успешный вход"}
+    return {"status": "success"}
 
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_panel(request: Request, session_id: Optional[str] = Cookie(None)):
-    if not session_id or session_id not in active_sessions:
-        return RedirectResponse(url="/", status_code=303)
-        
-    user_id = active_sessions[session_id]
-    user = None
-    with db_manager.get_connection() as conn:
-        user = conn.execute("SELECT * FROM Users WHERE id = ?", (user_id,)).fetchone()
-        
-    if not user or user["login"] != "Admin26":
-        return HTMLResponse(content="<h1>Доступ запрещен</h1><p>Только для администраторов.</p>", status_code=403)
-        
-    return HTMLResponse(content=f"<h1>Добро пожаловать в Панель Администратора, {user['full_name']}!</h1><p>Здесь вы можете управлять порталом.</p>")
+@app.get("/api/transports")
+async def get_transportsAPI():
+    return user_repo.get_transports()
+
+@app.post("/api/apply")
+async def applyAPI(app_data: ApplicationCreate, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Авторизуйтесь")
+    try:
+        user_repo.create_application(user["id"], app_data.transport_id, str(app_data.start_date), app_data.payment_method)
+        return {"status": "success"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Ошибка оформления")
+
+@app.post("/api/review")
+async def reviewAPI(review_data: ReviewCreate, session_id: Optional[str] = Cookie(None)):
+    user = get_current_user(session_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Авторизуйтесь")
+    try:
+        user_repo.create_review(user["id"], review_data.text, review_data.rating)
+        return {"status": "success"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Ошибка сохранения")
 
 if __name__ == "__main__":
     import uvicorn

@@ -31,6 +31,10 @@ class UserRepository:
     def get_user_by_login(self, login: str):
         with self.db.get_connection() as conn:
             return conn.execute("SELECT * FROM Users WHERE login = ?", (login,)).fetchone()
+            
+    def get_user_by_id(self, user_id: int):
+        with self.db.get_connection() as conn:
+            return conn.execute("SELECT * FROM Users WHERE id = ?", (user_id,)).fetchone()
 
     def create_user(self, user_data: dict) -> int:
         hashed_pw = self.hash_password(user_data["password"])
@@ -62,3 +66,33 @@ class UserRepository:
                 "phone": "+70000000000",
                 "email": "admin@drive.rf"
             })
+
+    def get_transports(self):
+        with self.db.get_connection() as conn:
+            return [dict(row) for row in conn.execute("SELECT * FROM Transport").fetchall()]
+
+    def create_application(self, user_id: int, transport_id: int, start_date: str, payment_method: str):
+        query = '''
+            INSERT INTO Applications (user_id, transport_id, start_date, payment_method, status)
+            VALUES (?, ?, ?, ?, 'Новая')
+        '''
+        with self.db.get_connection() as conn:
+            conn.execute(query, (user_id, transport_id, start_date, payment_method))
+            conn.commit()
+
+    def get_user_applications(self, user_id: int):
+        query = '''
+            SELECT a.id, a.start_date, a.payment_method, a.status, t.name as transport_name
+            FROM Applications a
+            JOIN Transport t ON a.transport_id = t.id
+            WHERE a.user_id = ?
+            ORDER BY a.id DESC
+        '''
+        with self.db.get_connection() as conn:
+            return [dict(row) for row in conn.execute(query, (user_id,)).fetchall()]
+            
+    def create_review(self, user_id: int, text: str, rating: int):
+        query = "INSERT INTO Reviews (user_id, text, rating) VALUES (?, ?, ?)"
+        with self.db.get_connection() as conn:
+            conn.execute(query, (user_id, text, rating))
+            conn.commit()

@@ -20,3 +20,19 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     login: str
     password: str
+
+class ApplicationCreate(BaseModel):
+    transport_id: int
+    start_date: date
+    payment_method: str
+
+    @field_validator('start_date')
+    @classmethod
+    def validate_start_date(cls, v):
+        if v < date.today():
+            raise ValueError("Дата начала обучения не может быть в прошлом")
+        return v
+
+class ReviewCreate(BaseModel):
+    text: str = Field(..., min_length=5, description="Текст отзыва")
+    rating: int = Field(..., ge=1, le=5, description="Рейтинг от 1 до 5")
